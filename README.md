@@ -13,12 +13,12 @@ Kimi/Claude-style agent skill: create and build Nostr client websites using the 
 
 ## Workflow
 
-1. Spawn a subagent (keeps main chat clean)
-2. Subagent reads **both** the mkstack and opencode skills
-3. Clone template → fresh git init → run OpenCode with the project description
-4. Report what was created
+1. Scaffold with `stacks mkstack` (package `@getstacks/stacks`), or clone https://gitlab.com/soapbox-pub/mkstack.git when the CLI is not installed.
+2. Read the new project's `AGENTS.md` before editing.
+3. Build with Stacks' `stacks agent`, with OpenCode (`opencode` skill — do not hard-code a model id), or by editing the project directly.
+4. Do not add NIP-28 chat, NIP-15 stalls, NIP-04 DMs, or NIP-96 uploads. The template's older examples mention some of those.
 
-Requires the [opencode skill](https://github.com/NostrDanish/opencode-skill).
+Requires the [opencode skill](https://github.com/NostrDanish/opencode-skill) only when OpenCode is the coder. Deploy with `npm run deploy` only when the user asked to publish.
 
 ## Install
 
