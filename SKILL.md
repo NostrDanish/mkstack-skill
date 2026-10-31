@@ -1,22 +1,32 @@
 ---
 name: mkstack
-description: Create and build Nostr client websites using the MKStack template with OpenCode. Use when the user wants to create a new Nostr-powered web application, build a Nostr client, or start a project using MKStack.
+description: Create Nostr client websites from the MKStack template (React + Vite + Tailwind + shadcn/ui) and build them with OpenCode. Use when starting a new Nostr-powered web app or MKStack project.
 ---
 
 # MKStack
 
-MKStack is a template for building Nostr clients with compatible coding agents like OpenCode and Shakespeare. This skill provides the complete workflow for creating new MKStack projects.
+MKStack is a template for building Nostr clients with compatible coding agents (OpenCode, Shakespeare, Cursor). This skill is the **scaffold + OpenCode** workflow only. OpenCode CLI details live in the `opencode` skill — read both before running.
 
-## Workflow: Spawn a Subagent
+## Host portability
 
-**The entire MKStack workflow should run in a subagent.** This keeps the main chat clean and handles all steps (clone, initialize, build) in one session.
+The original spawn/exec blocks below are **OpenClaw-shaped**. On other hosts, keep the same *steps* and drop the YAML:
 
-### Spawn Pattern
+| OpenClaw | Cursor / generic agent |
+|---|---|
+| `sessions_spawn` + `runTimeoutSeconds: 660` | Spawn a subagent / Task with a 10-minute budget |
+| `exec` + `pty: true` + `yieldMs` / `timeout` | Run OpenCode in an interactive terminal; do not background it |
+| `workdir:` | `cd` or `opencode run --dir <path>` |
 
-**Parent agent instructions:**
-1. Calculate the full project path: `<workspace>/projects/<project-name>`
-2. Calculate the full paths to the SKILL.md files for the following skills: `mkstack`, `opencode`
-3. Spawn with explicit skill usage instructions:
+Do **not** hardcode a model id. Use the model the user named, or the one selected in the `opencode` skill (`opencode models`).
+
+## Workflow: spawn a subagent
+
+Keep the long OpenCode run out of the main chat.
+
+**Parent agent:**
+1. Project path: `<workspace>/projects/<project-name>` (lowercase, hyphens).
+2. Resolve the full paths of the `mkstack` and `opencode` SKILL.md files.
+3. Spawn a subagent whose first instruction is: read both skills, then create the project. Do not improvise or skip OpenCode.
 
 ```
 sessions_spawn:
@@ -25,76 +35,64 @@ sessions_spawn:
   runTimeoutSeconds: 660
 ```
 
-**Important:**
-- The subagent will handle cloning, git init, and running OpenCode
-- Use descriptive project names (lowercase, hyphens for spaces)
+## For the subagent
 
-## For the Subagent: Complete Workflow
+### Step 1: Scaffold
 
-**CRITICAL: Before starting this workflow, you MUST:**
-1. Read this mkstack skill completely
-2. Read the opencode skill completely  
-3. Follow the steps below exactly — do NOT improvise, skip steps, or use alternative approaches
+Prefer the official generator when it is available (pins a release and keeps attribution):
 
-When you are the subagent executing this skill, follow these steps:
+```bash
+mkdir -p <workspace>/projects
+cd <workspace>/projects
+npm create mkstack@latest <project-name>
+cd <project-name>
+git rev-parse HEAD   # record the template SHA in the first commit message if a git history exists
+```
 
-### Step 1: Clone and Initialize
-
-Clone the MKStack template into a new project directory:
+If `npm create mkstack` is missing or the user asked to clone:
 
 ```bash
 mkdir -p <workspace>/projects
 cd <workspace>/projects
 git clone https://gitlab.com/soapbox-pub/mkstack.git <project-name>
 cd <project-name>
-rm README.md
-rm -rf .git
-git init
+TEMPLATE_SHA=$(git rev-parse HEAD)
+# Keep upstream README as attribution — do not delete it.
+git checkout --orphan tmp-init
 git add .
-git commit -m "Project created with MKStack: https://gitlab.com/soapbox-pub/mkstack.git"
+git commit -m "Project created with MKStack ${TEMPLATE_SHA}: https://gitlab.com/soapbox-pub/mkstack.git"
 ```
 
-**Important:** 
-- Replace `<project-name>` with the actual project name (lowercase, hyphens for spaces)
-- Replace `<workspace>` with your workspace directory
-- **Always create projects in `<workspace>/projects/`** — not the home directory (`~`) or elsewhere
+Always create projects under `<workspace>/projects/`, never `$HOME`.
 
 ### Step 2: Run OpenCode
 
-Use OpenCode to build the project based on the user's description:
+You MUST have read the `opencode` skill. Typical command (model comes from the user / `opencode models`, not from this file):
 
 ```bash
-cd <workspace>/projects/<project-name> && opencode run --model openrouter/anthropic/claude-sonnet-4.5 "[detailed project description]"
+cd <workspace>/projects/<project-name> && opencode run --auto --dir . --model <provider>/<model> "[detailed project description]"
 ```
 
-**exec parameters:**
-- `pty: true` **(CRITICAL - REQUIRED! Without this, you will see NO OUTPUT and OpenCode will appear to hang!)**
-- `workdir: <workspace>/projects/<project-name>`
-- `yieldMs: 600000` (blocks until completion)
-- `timeout: 600` (10 minutes)
+OpenClaw exec extras (ignore on Cursor): `pty: true`, `workdir: <project>`, `yieldMs: 600000`, `timeout: 600`.
 
-**IMPORTANT:** You MUST have read the opencode skill first to understand the correct syntax and parameters. Do NOT skip this step!
+Without a PTY you will see no streaming output and the run looks hung.
 
-### Step 3: Report Completion
+### Step 3: Report
 
-After OpenCode completes, report back what was created and where the project is located.
+Say what was created, the project path, and the template SHA if you cloned.
 
-## What MKStack Includes
+## What MKStack includes
 
-MKStack projects come pre-configured with:
-- **Nostr integration** - NostrProvider, hooks, and utilities
-- **React + Vite** - Modern frontend stack
-- **Tailwind CSS** - Utility-first styling
-- **shadcn/ui components** - Pre-built UI components
-- **TypeScript** - Type safety
-- **Skills** - Pre-built Nostr functionality (comments, DMs, infinite scroll, AI chat)
+Confirm against the template README after scaffolding (the list drifts):
 
-## Important Notes
+- Nostr integration (provider, hooks, utilities)
+- React + Vite + TypeScript
+- Tailwind CSS + shadcn/ui
+- Pre-built Nostr modules (comments, DMs, infinite scroll, AI chat — optional in current templates)
+- Often: Stacks packaging / Nostrbook MCP — use them if the scaffold installed them; do not invent a stack that is not in the repo
 
-- **Always spawn a subagent** - Don't run the workflow in the main session
-- **Read both skills** - Subagent needs mkstack AND opencode skills
-- **Always use pty:true** - OpenCode requires a pseudo-terminal
-- **Use high yieldMs** - Blocks until completion instead of backgrounding
-- **Work in <workspace>/projects/** - Keep projects organized in the projects directory (inside your workspace, not home directory)
-- **One project per directory** - Each MKStack project gets its own folder
-- **Create projects directory if needed** - If `<workspace>/projects/` doesn't exist, create it first with `mkdir -p <workspace>/projects`
+## Notes
+
+- One project per directory.
+- Pair with `opencode`. Do not re-document OpenCode install here.
+- Deploy/hosting is out of scope for this skill.

@@ -15,10 +15,11 @@ Kimi/Claude-style agent skill: create and build Nostr client websites using the 
 
 1. Spawn a subagent (keeps main chat clean)
 2. Subagent reads **both** the mkstack and opencode skills
-3. Clone template → fresh git init → run OpenCode with the project description
-4. Report what was created
+3. Prefer `npm create mkstack@latest`; clone only if the generator is missing (keep the upstream README / SHA)
+4. Run OpenCode with `--auto` and a model from `opencode models` — do not hardcode model ids
+5. Report what was created
 
-Requires the [opencode skill](https://github.com/NostrDanish/opencode-skill).
+Requires the [opencode skill](https://github.com/NostrDanish/opencode-skill). OpenClaw `sessions_spawn` / `pty` blocks in SKILL.md map to a long-running terminal on Cursor and similar hosts.
 
 ## Install
 
